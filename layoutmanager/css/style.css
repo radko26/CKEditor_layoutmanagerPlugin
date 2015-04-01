@@ -1,12 +1,10 @@
-.layout-column{
-	border:1px dashed black;
-	text-align: center;
+.layout-column {
+    border: 1px dashed black;
+    text-align: center;
 }
 
-.layout-container{
-	margin:1px;
+.layout-container {
+    margin: 1px;
 }
 
-.layout-row{
-
-}
+.layout-row {}

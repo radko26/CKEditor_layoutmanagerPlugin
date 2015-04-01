@@ -11,30 +11,9 @@ CKEDITOR.plugins.add('layoutmanager', {
 
         editor.addContentsCss(this.path + 'css/style.css');
 
+
         CKEDITOR.dialog.add('layoutsDialog', this.path + 'dialogs/layoutsDialog.js');
         //CKEDITOR.dialog.add('manageLayoutsDialog', this.path + 'dialogs/layoutsDialog.js');
-
-
-        /*
-            Cast the layout to widget
-        */
-        /*
-        editor.widgets.add('layoutmanager-widget', {
-
-            upcast: function(element) {
-
-                return (element.name == 'div' && element.hasClass('layout-container')); //
-            },
-            downcast: function(element) {
-                //return (element.name == 'div' && element.hasClass('layout-row'));
-            },
-            editables: {
-                content: {
-                    selector: '.layout-row'
-                }
-            }
-        });
-        */
 
 
         /*
@@ -50,7 +29,6 @@ CKEDITOR.plugins.add('layoutmanager', {
             new CKEDITOR.dialogCommand('manageLayoutsDialog', {
                 allowedContent: 'div[*];span[*]'
             }));
-
 
 
 
@@ -70,17 +48,17 @@ CKEDITOR.plugins.add('layoutmanager', {
             });
 
 
-
             var activeMenuItems = {};
 
             activeMenuItems['ManageLayout'] = CKEDITOR.TRISTATE_OFF;
 
             editor.contextMenu.addListener(function(element) {
+
                 // Gets the parents of the clicked element from closest to furthest
                 var elementsTree = element.getParents(true);
 
                 var layoutContainer;
-                //Searches for the closest layout
+                //Searches in the parents of the clicked element for the closest layout
                 for (var i = 0; i < elementsTree.length; i++) {
                     if (elementsTree[i].hasClass('layout-container')) {
                         layoutContainer = elementsTree[i];

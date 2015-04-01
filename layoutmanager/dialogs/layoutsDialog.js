@@ -1,5 +1,5 @@
 /**
-    Dialogs to choose layouts from
+    Dialogs
     Author: Radoslav Petkov
     */
 
@@ -18,7 +18,7 @@
     }
 
     /*
-        Magic todo comment
+        Creates the dialog's layout boxes and appends action on click. 
     */
     function constructLayout(rows, template, editor, action) {
 
@@ -42,6 +42,7 @@
         html += generate;
         html += '</div>';
         var templateWithInjectedValues = trim(template.output(injectTemplate));
+
         return {
             type: 'html',
             id: rows,
@@ -56,8 +57,8 @@
 
 
     /*
-            Construct function that generates the small grid in the dialog and 
-            adds the real grid in the field.
+        Construct function that generates the small grid in the dialog and 
+        adds the real grid in the field.
     */
     function generateLayoutObjects(editor, action) {
         var firstRow = [];
@@ -68,7 +69,9 @@
             '<div class="container-fluid layout-container">\
                  <div class="row layout-row" >\
                      <div class="col-xs-{size1} col-sm-{size1} col-md-{size1} col-lg-{size1} layout-column ">\
-                        <p>content</p>\
+                        <div class="layout-column-content">\
+                            <p>content</p>\
+                        </div>\
                     </div>\
                 </div>\
             </div>'
@@ -148,6 +151,10 @@
         };
     }
 
+    /*
+        Creates definiton object
+    */
+
     function generateDialogDefinition(title, minWidth, minHeight, layouts) {
         return {
             title: title,
@@ -176,13 +183,44 @@
 
 
     /*
-        Compiles the template with the values and then inserts it into the editor.
+        Inserts new layout
     */
 
     function insertLayoutIntoEditor(editor, template) {
-        editor.insertHtml(template);
+        var layoutElement = CKEDITOR.dom.element.createFromHtml(template);
+        console.log(layoutElement);
+        /*
+        layoutElement.on('destroy', function(ev) {
+            console.log('never called');
+        });
+        */
+        editor.insertElement(layoutElement);
+        // layoutElement.fire('change');
+
+        // Listens on editor's change and check if the layout col is bound to be removed.
+        // Slow working workaround
+        /*
+        editor.on('change', function(ev) {
+
+            var newLayoutRowElement = layoutElement.getChildren().getItem(0);
+            var newLayoutColElements = newLayoutRowElement.getChildren();
+
+            for (var i = 0; i < newLayoutColElements.count(); i++) {
+                console.log(newLayoutColElements.getItem(i));
+                if (newLayoutColElements.getItem(i).getChildren().count == 0) {
+                    console.log('should add space');
+                    newLayoutColElements.getItem(i).appendText('as');
+                }
+            }
+        });
+        */
+
         CKEDITOR.dialog.getCurrent().hide();
     }
+
+    /*
+        Replaces the old layout with new one. 
+    */
 
     function replaceCurrentLayout(editor, template) {
 
@@ -192,25 +230,31 @@
 
         var numberOfColumnsInOldLayout = oldLayout.getChildren().getItem(0).getChildren().count();
         var numberOfColumnsInNewLayout = newLayout.getChildren().getItem(0).getChildren().count();
-        var content;
 
+        var oldLayoutRowElement = oldLayout.getChildren().getItem(0);
+        var oldLayoutColElements = oldLayoutRowElement.getChildren();
+
+
+        var newLayoutRowElement = newLayout.getChildren().getItem(0);
+        var newLayoutColElements = newLayoutRowElement.getChildren();
+
+        var emptyNewLayout = function(layoutColElements, columnIndex) {
+            for (var j = 0; j < layoutColElements.getItem(columnIndex).getChildren().count(); j++) {
+                layoutColElements.getItem(columnIndex).getChildren().getItem(j).remove();
+            }
+        }
 
         if (numberOfColumnsInNewLayout < numberOfColumnsInOldLayout) {
-            // insert the last col child into its last sibling and then copy to new
 
             for (var i = 0; i < numberOfColumnsInNewLayout; i++) {
 
-                for (var j = 0; j < newLayout.getChildren().getItem(0).getChildren().getItem(i).getChildren().count(); j++) {
-                    newLayout.getChildren().getItem(0).getChildren().getItem(i).getChildren().getItem(j).remove();
-                }
-
-                oldLayout.getChildren().getItem(0).getChildren().getItem(i).moveChildren(newLayout.getChildren().getItem(0).getChildren().getItem(i));
+                emptyNewLayout(newLayoutColElements, i);
+                oldLayoutColElements.getItem(i).moveChildren(newLayoutColElements.getItem(i));
 
             }
-
-            content = "";
+            // insert the last column child into its last sibling
             for (var i = numberOfColumnsInNewLayout; i < numberOfColumnsInOldLayout; i++) {
-                oldLayout.getChildren().getItem(0).getChildren().getItem(i).moveChildren(newLayout.getChildren().getItem(0).getChildren().getItem(numberOfColumnsInNewLayout - 1));
+                oldLayoutColElements.getItem(i).moveChildren(newLayoutColElements.getItem(numberOfColumnsInNewLayout - 1));
             }
 
         } else {
@@ -218,25 +262,15 @@
 
             for (var i = 0; i < numberOfColumnsInOldLayout; i++) {
 
-                //content = oldLayout.getChildren().getItem(0).getChildren().getItem(i).getHtml();
-
-
-                for (var j = 0; j < newLayout.getChildren().getItem(0).getChildren().getItem(i).getChildren().count(); j++) {
-                    newLayout.getChildren().getItem(0).getChildren().getItem(i).getChildren().getItem(j).remove();
-                }
-
-                oldLayout.getChildren().getItem(0).getChildren().getItem(i).moveChildren(newLayout.getChildren().getItem(0).getChildren().getItem(i));
+                emptyNewLayout(newLayoutColElements, i);
+                oldLayoutColElements.getItem(i).moveChildren(newLayoutColElements.getItem(i));
             }
 
         }
 
-
-
         newLayout.replace(oldLayout);
-
         CKEDITOR.dialog.getCurrent().hide();
     }
-
 
 
     /*
@@ -250,6 +284,7 @@
         // Fill dialog with layout templates.
         var layouts = generateLayoutObjects(editor, insertLayoutIntoEditor);
 
+
         return generateDialogDefinition(editor.lang.layoutmanager.dialogTitle, width, height, layouts);
     }
 
@@ -257,6 +292,7 @@
     /*
         Dialog used for replacing an old layout with new one
     */
+
     function manageLayoutsDialog(editor) {
         var width = 200;
         var height = 100;
