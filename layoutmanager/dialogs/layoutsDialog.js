@@ -1,7 +1,7 @@
 /**
     Dialogs
     Author: Radoslav Petkov
-    */
+ */
 
 (function() {
 
@@ -68,8 +68,8 @@
         var templateWith1Col = new CKEDITOR.template(
             '<div class="container-fluid layout-container">\
                  <div class="row layout-row" >\
-                     <div class="col-xs-{size1} col-sm-{size1} col-md-{size1} col-lg-{size1} layout-column ">\
-                        <div class="layout-column-content">\
+                     <div class="col-xs-{size1} col-sm-{size1} col-md-{size1} col-lg-{size1} layout-column">\
+                        <div class="layout-column-content" >\
                             <p>content</p>\
                         </div>\
                     </div>\
@@ -78,12 +78,12 @@
         );
 
         var templateWith2Cols = new CKEDITOR.template(
-            '<div class="container-fluid layout-container">\
-                 <div class="row  layout-row">\
-                     <div class="col-xs-{size1} col-sm-{size1} col-md-{size1} col-lg-{size1} layout-column">\
-                         <p>content</p>\
+            '<div class="container-fluid layout-container" data-cke-survive="true">\
+                 <div class="row  layout-row" data-cke-survive="true">\
+                     <div class="col-xs-{size1} col-sm-{size1} col-md-{size1} col-lg-{size1} layout-column " data-cke-survive="true">\
+                         <p data-cke-survive="true">content</p>\
                      </div>\
-                    <div class="col-xs-{size2} col-sm-{size2} col-md-{size2} col-lg-{size2} layout-column">\
+                    <div class="col-xs-{size2} col-sm-{size2} col-md-{size2} col-lg-{size2} layout-column" data-cke-survive="true">\
                         <p>content</p>\
                     </div>\
                 </div>\
@@ -168,6 +168,7 @@
                     type: 'hbox',
                     id: "firstRow",
                     children: layouts.first
+
                 }, {
                     type: 'hbox',
                     id: "secondRow",
@@ -188,33 +189,8 @@
 
     function insertLayoutIntoEditor(editor, template) {
         var layoutElement = CKEDITOR.dom.element.createFromHtml(template);
-        console.log(layoutElement);
-        /*
-        layoutElement.on('destroy', function(ev) {
-            console.log('never called');
-        });
-        */
+        editor.plugins.layoutmanager.numberOfLayouts += 1;
         editor.insertElement(layoutElement);
-        // layoutElement.fire('change');
-
-        // Listens on editor's change and check if the layout col is bound to be removed.
-        // Slow working workaround
-        /*
-        editor.on('change', function(ev) {
-
-            var newLayoutRowElement = layoutElement.getChildren().getItem(0);
-            var newLayoutColElements = newLayoutRowElement.getChildren();
-
-            for (var i = 0; i < newLayoutColElements.count(); i++) {
-                console.log(newLayoutColElements.getItem(i));
-                if (newLayoutColElements.getItem(i).getChildren().count == 0) {
-                    console.log('should add space');
-                    newLayoutColElements.getItem(i).appendText('as');
-                }
-            }
-        });
-        */
-
         CKEDITOR.dialog.getCurrent().hide();
     }
 
@@ -223,8 +199,7 @@
     */
 
     function replaceCurrentLayout(editor, template) {
-
-        var oldLayout = editor.tranformLayout.element;
+        var oldLayout = editor.plugins.layoutmanager.tranformLayout.element;
         var newLayout = CKEDITOR.dom.element.createFromHtml(template);
 
 
@@ -242,7 +217,7 @@
             for (var j = 0; j < layoutColElements.getItem(columnIndex).getChildren().count(); j++) {
                 layoutColElements.getItem(columnIndex).getChildren().getItem(j).remove();
             }
-        }
+        };
 
         if (numberOfColumnsInNewLayout < numberOfColumnsInOldLayout) {
 
@@ -277,13 +252,14 @@
         Dialog used only for adding new layout into the editor
     */
 
-    function layoutsDialog(editor) {
+    function addLayoutDialog(editor) {
         var width = 200;
         var height = 100;
 
+        addChangeListeners(editor);
+
         // Fill dialog with layout templates.
         var layouts = generateLayoutObjects(editor, insertLayoutIntoEditor);
-
 
         return generateDialogDefinition(editor.lang.layoutmanager.dialogTitle, width, height, layouts);
     }
@@ -293,7 +269,7 @@
         Dialog used for replacing an old layout with new one
     */
 
-    function manageLayoutsDialog(editor) {
+    function manageLayoutDialog(editor) {
         var width = 200;
         var height = 100;
 
@@ -302,15 +278,58 @@
         return generateDialogDefinition(editor.lang.layoutmanager.dialogTitle, width, height, layouts);
     }
 
-    /*
+    function addChangeListeners(editor) {
+        var isOnChangeListenerActive = true;
+        var onChange = function(event) {
 
-        document.addEventListener("layoutmanager-transformLayout", function(event) {
-            var element = event.detail;
-            console.log(element);
-        });
+            //this ends up not working fu
 
-    */
-    CKEDITOR.dialog.add('layoutsDialog', layoutsDialog);
-    CKEDITOR.dialog.add('manageLayoutsDialog', manageLayoutsDialog);
+            var currentLayoutsInDOM = editor.document.$.getElementsByClassName("layout-container");
+            // console.log(currentLayoutsInDOM[0]);
+            //console.log(currentLayoutsInDOM[1]);
+            for (var i = 0; i < currentLayoutsInDOM.length; i++) {
+                var el = currentLayoutsInDOM[i].innerHTML;
+                var layout = new CKEDITOR.dom.element.createFromHtml(el);
 
-})()
+
+                var layoutRowElementChildren = layout.getChildren();
+                // var layoutColElements = layoutRowElement.getChildren();
+                var columnCounter = 0;
+                for (var j = 0; j < layoutRowElementChildren.count(); j++) {
+                    if (layoutRowElementChildren.getItem(j).getName() == 'div') {
+
+                        columnCounter += 1;
+                    }
+                }
+
+                console.log(columnCounter);
+
+
+
+            }
+
+        };
+
+        var numberOfLayoutsListener = function(event) {
+            // console.log(editor.plugins.layoutmanager.numberOfLayouts);
+            if (editor.plugins.layoutmanager.numberOfLayouts <= 0) {
+                isOnChangeListenerActive = false;
+                editor.removeListener('change', onChange);
+                event.stop();
+            } else {
+                if (isOnChangeListenerActive == false) {
+                    editor.on('change', onChange, null, null, 2);
+                    onChange();
+                    isOnChangeListenerActive = true;
+                }
+            }
+        };
+
+        editor.on('change', numberOfLayoutsListener, null, null, 1);
+        editor.on('change', onChange, null, null, 2);
+    }
+
+    CKEDITOR.dialog.add('addLayoutDialog', addLayoutDialog);
+    CKEDITOR.dialog.add('manageLayoutDialog', manageLayoutDialog);
+
+}())
