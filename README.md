@@ -1,0 +1,3 @@
+# CKEditor_layoutmanagerPlugin
+
+TODO
