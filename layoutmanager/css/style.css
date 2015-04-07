@@ -1,6 +1,7 @@
 .layout-column {
     border: 1px dashed black;
     text-align: center;
+    word-wrap: break-word;
 }
 
 .layout-container {
