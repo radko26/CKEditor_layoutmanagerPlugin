@@ -38,7 +38,6 @@ function pluginInit(editor) {
         allowedContent = editor.config.layoutmanager_allowedContent();
     }
 
-
     if (editor.config.layoutmanager_loadbootstrap == undefined || editor.config.layoutmanager_loadbootstrap != false) {
         if (typeof editor.config.contentsCss == 'object') {
             editor.config.contentsCss.push(CKEDITOR.getUrl(this.path + 'css/bootstrap.css'));
@@ -47,17 +46,14 @@ function pluginInit(editor) {
         }
     }
 
-
     if (typeof editor.config.contentsCss == 'object') {
         editor.config.contentsCss.push(CKEDITOR.getUrl(this.path + 'css/style.css'));
     } else {
         editor.config.contentsCss = [CKEDITOR.getUrl(this.path + 'css/style.css')];
     }
 
-
     CKEDITOR.dialog.add('addLayoutDialog', layoutManager.addLayoutDialog);
     CKEDITOR.dialog.add('manageLayoutDialog', layoutManager.manageLayoutDialog);
-
 
     editor.addCommand('showLayoutsDialog',
         new CKEDITOR.dialogCommand('addLayoutDialog', {
@@ -69,18 +65,15 @@ function pluginInit(editor) {
             allowedContent: allowedContent
         }));
 
-
     editor.addCommand('removeLayout', {
         exec: function(editor) {
             var answer = confirm("All data inside the layout will be lost!");
             if (answer) {
-                editor.layoutmanager.selectedLayout.element.remove();
+                layoutManager.remove();
                 //editor.layoutmanager.numberOfLayouts -= 1; //soft - delete
             }
         }
     });
-
-
 
     if (editor.contextMenu) {
 
@@ -100,7 +93,6 @@ function pluginInit(editor) {
             command: 'removeLayout',
             group: 'LayoutTransform'
         })
-
 
         var activeMenuItems = {};
 
@@ -151,7 +143,7 @@ function pluginInit(editor) {
 
 
 /**
-    LayoutManager class 
+    LayoutManager class implementing all layout functionalities.
     Author: Radoslav Petkov
  */
 
@@ -181,7 +173,7 @@ function LayoutManager(editor) {
     /*
         The button's view should be small representation of the actual layout that will be inserted if the buttons is clicked.
         In order to accomplish it ckeditor's styles should be overrided by adding hardcoded styles to the elements
-        such as width,height,border and position,
+        such as width,height,border and position.
 
         @Param: 
             columns: The count of the columns
@@ -453,6 +445,11 @@ function LayoutManager(editor) {
 
         return createDialogDefinition(editor.lang.layoutmanager.dialogTitle, width, height, layouts);
     };
+
+
+    this.remove = function() {
+        editor.layoutmanager.selectedLayout.element.remove();
+    }
 
     /*
         var addChangeListeners = function(editor) {
