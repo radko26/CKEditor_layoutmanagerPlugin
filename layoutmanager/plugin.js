@@ -1,7 +1,6 @@
 /**
     This plugin adds various custom layouts using twitter bootstrap grid system.
     Author: Radoslav Petkov
-
 **/
 
 'use strict';
@@ -13,32 +12,28 @@ CKEDITOR.plugins.add('layoutmanager', {
 
 });
 
-
-
+/**
+ * Config variables
+ * config.layoutmanager_loadbootstrap  By default is set to false, otherwise loads the embedded bootstrap style.
+ * config.layoutmanager_allowedContent  By default is set to allow all tags.
+ * config.layoutmanager_buttonBoxWidth  The width of each layout-preview button in the dialog.
+ * config.layoutmanager_removeLayoutMsg The message displayed on the window for confirmation of the remove layout operation.
+ */
 function pluginInit(editor) {
 
     var layoutManager = new LayoutManager(editor);
     editor.layoutmanager = {};
-
-    /*
-        Config variables
-        config.layoutmanager_loadbootstrap
-        config.layoutmanager_allowedContent
-        config.layoutmanager_buttonBoxWidth 
-
-    */
-
-    //editor.layoutmanager.numberOfLayouts = 0; / soft-delete
+    //editor.layoutmanager.numberOfLayouts = 0; / soft-delete -- planned for further implementing if needed
 
     var allowedContent;
 
-    if (editor.config.layoutmanager_allowedContent == undefined) {
-        allowedContent = 'p a div span h2 h3 h4 h5 h6 section article iframe object embed strong b i em cite pre blockquote small sub sup code ul ol li dl dt dd table thead tbody th tr td img caption mediawrapper br[href,src,target,width,height,colspan,span,alt,name,title,class,id,data-options]{text-align,float,margin}(*);'
-    } else {
+    if (editor.config.layoutmanager_allowedContent) {
         allowedContent = editor.config.layoutmanager_allowedContent();
+    } else {
+        allowedContent = 'p a div span h2 h3 h4 h5 h6 section article iframe object embed strong b i em cite pre blockquote small sub sup code ul ol li dl dt dd table thead tbody th tr td img caption mediawrapper br[href,src,target,width,height,colspan,span,alt,name,title,class,id,data-options]{text-align,float,margin}(*)';
     }
 
-    if (editor.config.layoutmanager_loadbootstrap == undefined || editor.config.layoutmanager_loadbootstrap != false) {
+    if (editor.config.layoutmanager_loadbootstrap) {
         if (typeof editor.config.contentsCss == 'object') {
             editor.config.contentsCss.push(CKEDITOR.getUrl(this.path + 'css/bootstrap.css'));
         } else {
@@ -67,32 +62,35 @@ function pluginInit(editor) {
 
     editor.addCommand('removeLayout', {
         exec: function(editor) {
-            var answer = confirm("All data inside the layout will be lost!");
+            var msg = "All data inside the layout will be lost!";
+
+            if (editor.config.layoutmanager_removeLayoutMsg) {
+                msg = editor.config.layoutmanager_removeLayoutMsg;
+            }
+            var answer = confirm(msg);
             if (answer) {
                 layoutManager.remove();
-                //editor.layoutmanager.numberOfLayouts -= 1; //soft - delete
+                //editor.layoutmanager.numberOfLayouts -= 1; //soft - delete -- planned for further implementing if needed
             }
         }
     });
 
     if (editor.contextMenu) {
-
         editor.addMenuGroup('LayoutTransform');
 
-
         editor.addMenuItem('ManageLayout', {
-            label: 'Manage Layout',
+            label: editor.lang.layoutmanager.manageLayoutMenuLabel,
             //icon: 
             command: 'showLayoutManagerDialog',
             group: 'LayoutTransform'
         });
 
         editor.addMenuItem('RemoveLayout', {
-            label: 'Remove Layout',
+            label: editor.lang.layoutmanager.removeLayoutMenuLabel,
             //icon:
             command: 'removeLayout',
             group: 'LayoutTransform'
-        })
+        });
 
         var activeMenuItems = {};
 
@@ -100,7 +98,6 @@ function pluginInit(editor) {
         activeMenuItems['RemoveLayout'] = CKEDITOR.TRISTATE_OFF;
 
         editor.contextMenu.addListener(function(element) {
-
             // Gets the parents of the clicked element from closest to furthest
             var elementsTree = element.getParents(true);
 
@@ -112,49 +109,32 @@ function pluginInit(editor) {
                     break;
                 }
             }
-
-            if (layoutContainer != undefined) {
-
+            if (layoutContainer) {
                 editor.layoutmanager.selectedLayout = {
                     element: layoutContainer
                 }
                 return activeMenuItems;
             }
         });
-
     } else {
         alert('contextmenu plugin required to use all plugin features');
     }
-
 
     editor.ui.addButton('LayoutManager', {
         title: editor.lang.layoutmanager.title,
         icon: this.path + 'icons/icon.png',
         command: 'showLayoutsDialog'
     });
-
 }
 
-
-
-
-/* ******************************************************************************** */
-
-
-
-/**
-    LayoutManager class implementing all layout functionalities.
-    Author: Radoslav Petkov
+/*
+ *   LayoutManager class implementing all layout functionalities.
+ *   Author: Radoslav Petkov
+ *
+ *   Variables stored into the editor's object:
+ *   {ckeditor.dom.element} editor.layoutmanager.selectedLayout.element The selected with the cursor element.
  */
-
 function LayoutManager(editor) {
-
-    /*
-        Variables stored into the editor's object:
-
-        editor.layoutmanager.selectedLayout.element
-
-    */
 
     var trim = function(str) {
         // removes newline / carriage return
@@ -170,50 +150,44 @@ function LayoutManager(editor) {
 
     this.trim = trim;
 
-    /*
-        The button's view should be small representation of the actual layout that will be inserted if the buttons is clicked.
-        In order to accomplish it ckeditor's styles should be overrided by adding hardcoded styles to the elements
-        such as width,height,border and position.
-
-        @Param: 
-            columns: The count of the columns
-            columnsSizes : Array that holds the size of each column in ration columnsSizes[i] : 12
-
-    */
-
+    /**
+     * The button's view should be small representation of the actual layout.
+     * In order to accomplish it ckeditor's styles should be overrided by adding hardcoded styles to the elements
+     * such as width,height,border and position.
+     *
+     * @param {integer} columns The count of the columns.
+     * @param {integer array}  columnsSizes Holds the size of each column in ratio columnsSizes[i] : 12.
+     */
     var createLayoutButtonView = function(columns, columnsSizes) {
         var colWidth = [];
         var boxWidth = 58;
 
-        if (editor.config.layoutmanager_buttonBoxWidth != undefined) {
+        if (editor.config.layoutmanager_buttonBoxWidth) {
             boxWidth = editor.config.layoutmanager_buttonBoxWidth;
         }
 
-        var seedWidth = ((boxWidth - 2) / 12); // substract two pixels for the left and right border;
+        var seedWidth = ((boxWidth - 2) / 12); // Substracts two pixels for the left and right border
 
         for (var i = 1; i <= 12; i++) {
             colWidth[i] = (seedWidth * i);
         }
 
         var html = '<div class="container-fluid">';
-        var createdColumns = "";
-        for (var i = 0; i < columns; i++) {
-            // If the column is not in the beginning set the border-left to 0
-            // The height of the button is set on 30px
-            createdColumns += ('<div style="cursor:pointer;border:1px solid #778899;float:left;position:relative;background:#B0C4DE;text-align:center;height:30px;line-height: 30px;width:' + (colWidth[columnsSizes[i]] - 1) + 'px;' + ((i != 0) ? 'border-left:none' : '') + ' "> ' + '</div>');
 
+        for (var i = 0; i < columns; i++) {
+            // If the column is not in the beginning set the border-left to 0.
+            // The height of the button is set on 30px.
+            html = html.concat('<div style="cursor:pointer;border:1px solid #778899;float:left;position:relative;background:#B0C4DE;text-align:center;height:30px;line-height: 30px;width:' + (colWidth[columnsSizes[i]] - 1) + 'px;' + ((i != 0) ? 'border-left:none' : '') + ' "> ' + '</div>');
         }
-        html += createdColumns;
-        html += '</div>';
+
+        html = html.concat('</div>');
         return {
             "html": html,
             "width": boxWidth
         };
     };
 
-
     var createLayoutButton = function(type, template, action) {
-
         var cols = type.split("/");
         var injectTemplate = {};
 
@@ -222,8 +196,6 @@ function LayoutManager(editor) {
         }
 
         var button = createLayoutButtonView(cols.length, cols);
-
-
         var templateWithInjectedValues = trim(template.output(injectTemplate));
 
         return {
@@ -238,9 +210,7 @@ function LayoutManager(editor) {
         };
     };
 
-
     this.createLayoutButton = createLayoutButton;
-
 
     var generateLayoutObjects = function(onClickAction) {
         var firstRow = [];
@@ -306,7 +276,6 @@ function LayoutManager(editor) {
             </div>'
         );
 
-
         firstRow.push(createLayoutButton("12", templateWith1Col, onClickAction));
         firstRow.push(createLayoutButton("6/6", templateWith2Cols, onClickAction));
         firstRow.push(createLayoutButton("9/3", templateWith2Cols, onClickAction));
@@ -322,15 +291,12 @@ function LayoutManager(editor) {
         thirdRow.push(createLayoutButton("3/6/3", templateWith3Cols, onClickAction));
         thirdRow.push(createLayoutButton("3/3/6", templateWith3Cols, onClickAction));
 
-
-
         return {
             first: firstRow,
             second: secondRow,
             third: thirdRow
         };
     };
-
 
     var createDialogDefinition = function(title, minWidth, minHeight, layouts) {
         return {
@@ -345,7 +311,6 @@ function LayoutManager(editor) {
                     type: 'hbox',
                     id: "firstRow",
                     children: layouts.first
-
                 }, {
                     type: 'hbox',
                     id: "secondRow",
@@ -359,14 +324,12 @@ function LayoutManager(editor) {
         };
     };
 
-
     var insertLayoutIntoEditorAction = function(template) {
         var layoutElement = CKEDITOR.dom.element.createFromHtml(template);
         // editor.plugins.layoutmanager.numberOfLayouts += 1; // soft-delete
         editor.insertElement(layoutElement);
         CKEDITOR.dialog.getCurrent().hide();
     };
-
 
     var createLayoutReplacement = function(oldLayout, newLayout) {
         var numberOfColumnsInOldLayout = oldLayout.getChildren().getItem(0).getChildren().count();
@@ -375,43 +338,35 @@ function LayoutManager(editor) {
         var oldLayoutRowElement = oldLayout.getChildren().getItem(0);
         var oldLayoutColElements = oldLayoutRowElement.getChildren();
 
-
         var newLayoutRowElement = newLayout.getChildren().getItem(0);
         var newLayoutColElements = newLayoutRowElement.getChildren();
 
-        // Because the initial template may contain content into its columns , it should be cleared when moving
+        // Because the initial template may contains contents into its columns , it should be cleared when moving
         // elements from the old layout to the new one.
         var clearColumnContent = function(layoutColElements, columnIndex) {
-            for (var j = 0; j < layoutColElements.getItem(columnIndex).getChildren().count(); j++) {
+            var layoutColElementsSize = layoutColElements.getItem(columnIndex).getChildren().count();
+            for (var j = 0; j < layoutColElementsSize; j++) {
                 layoutColElements.getItem(columnIndex).getChildren().getItem(j).remove();
             }
         };
 
-
         if (numberOfColumnsInNewLayout < numberOfColumnsInOldLayout) {
-
             for (var i = 0; i < numberOfColumnsInNewLayout; i++) {
                 clearColumnContent(newLayoutColElements, i);
                 oldLayoutColElements.getItem(i).moveChildren(newLayoutColElements.getItem(i));
-
             }
-
             // Inserts the last column child into its last sibling
             for (var i = numberOfColumnsInNewLayout; i < numberOfColumnsInOldLayout; i++) {
                 oldLayoutColElements.getItem(i).moveChildren(newLayoutColElements.getItem(numberOfColumnsInNewLayout - 1));
             }
-
         } else {
-
             //Copies content from old to new
             for (var i = 0; i < numberOfColumnsInOldLayout; i++) {
                 clearColumnContent(newLayoutColElements, i);
                 oldLayoutColElements.getItem(i).moveChildren(newLayoutColElements.getItem(i));
             }
-
         }
         return newLayout;
-
     };
 
     this.createLayoutReplacement = createLayoutReplacement;
@@ -419,61 +374,51 @@ function LayoutManager(editor) {
     var replaceCurrentLayoutAction = function(template) {
         var oldLayout = editor.layoutmanager.selectedLayout.element;
         var newEmptyLayout = CKEDITOR.dom.element.createFromHtml(template);
-
         var newLayout = createLayoutReplacement(oldLayout, newEmptyLayout);
         newLayout.replace(oldLayout);
         CKEDITOR.dialog.getCurrent().hide();
     };
 
-
-
     this.addLayoutDialog = function(editor) {
         var width = 200;
         var height = 100;
-
         var layouts = generateLayoutObjects(insertLayoutIntoEditorAction);
-
-        return createDialogDefinition(editor.lang.layoutmanager.dialogTitle, width, height, layouts);
+        return createDialogDefinition(editor.lang.layoutmanager.addLayoutDialogTitle, width, height, layouts);
     };
-
 
     this.manageLayoutDialog = function(editor) {
         var width = 200;
         var height = 100;
-
         var layouts = generateLayoutObjects(replaceCurrentLayoutAction);
-
-        return createDialogDefinition(editor.lang.layoutmanager.dialogTitle, width, height, layouts);
+        return createDialogDefinition(editor.lang.layoutmanager.manageLayoutDialogTitle, width, height, layouts);
     };
-
 
     this.remove = function() {
         editor.layoutmanager.selectedLayout.element.remove();
-    }
+    };
+
+
+    /*
+        This piece of commented code is probable workaround for the bug related to the removal of 'layout-column'
+        because of the editor's default behaviour.
+    */
 
     /*
         var addChangeListeners = function(editor) {
-
             var elementsList;
-            //Another approuch
+            //Another approach
             editor.on('elementsPathUpdate', function(event) {
                 elementsList = editor._.elementsPath.list;
             });
 
-
             var isOnChangeListenerActive = true;
 
             var onChange = function(event) {
-
                 //this ends up not working fu, needs a map
-                
                     var currentLayoutsInDOM = editor.document.$.getElementsByClassName("layout-container");
-            
                     for (var i = 0; i < currentLayoutsInDOM.length; i++) {
                         var el = currentLayoutsInDOM[i].innerHTML;
                         var layout = new CKEDITOR.dom.element.createFromHtml(el);
-
-
                         var layoutRowElementChildren = layout.getChildren();
                         // var layoutColElements = layoutRowElement.getChildren();
                         var columnCounter = 0;
@@ -483,12 +428,9 @@ function LayoutManager(editor) {
                                 columnCounter += 1;
                             }
                         }
-            
                         console.log(columnCounter);
-
                     }
                     
-
                 //This might be a better approach;
                 if (elementsList != undefined) {
                     var currentSelectedColumn;
@@ -512,7 +454,6 @@ function LayoutManager(editor) {
 
             };
         
-
             var numberOfLayoutsListener = function(event) {
                 // console.log(editor.plugins.layoutmanager.numberOfLayouts);
                 if (editor.plugins.layoutmanager.numberOfLayouts <= 0) {
@@ -531,6 +472,4 @@ function LayoutManager(editor) {
             editor.on('change', numberOfLayoutsListener, null, null, 1);
             editor.on('change', onChange, null, null, 2);
     */
-
-
 }

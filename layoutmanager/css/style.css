@@ -1,11 +1,9 @@
+.layout-container {
+    margin: 1px;
+}
+
 .layout-column {
     border: 1px dashed black;
     text-align: center;
     word-wrap: break-word;
 }
-
-.layout-container {
-    margin: 1px;
-}
-
-.layout-row {}

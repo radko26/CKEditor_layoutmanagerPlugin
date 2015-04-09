@@ -1,4 +1,9 @@
 CKEDITOR.plugins.setLang('layoutmanager', 'bg', {
     title: 'Оформление',
-    dialogTitle: "Избери шаблон"
+    addLayoutDialogTitle: 'Избери шаблон',
+    manageLayoutDialogTitle: 'Замени с',
+    removeLayoutMenuLabel: 'Премахни шаблон',
+    manageLayoutMenuLabel: 'Замени шаблон'
+
+
 });

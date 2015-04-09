@@ -1,4 +1,7 @@
 CKEDITOR.plugins.setLang('layoutmanager', 'en', {
-    title: 'Grids',
-    dialogTitle: 'Choose grid template'
+    title: 'Layouts',
+    addLayoutDialogTitle: 'Choose layout',
+    manageLayoutDialogTitle: 'Replace layout with',
+    removeLayoutMenuLabel: 'Remove layout',
+    manageLayoutMenuLabel: 'Replace layout'
 });
